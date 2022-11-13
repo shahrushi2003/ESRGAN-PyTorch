@@ -178,11 +178,12 @@ def main():
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
-    train_datasets = TrainValidImageDataset(esrgan_config.train_gt_images_dir,
-                                            esrgan_config.gt_image_size,
-                                            esrgan_config.upscale_factor,
-                                            "Train")
-    test_datasets = TestImageDataset(esrgan_config.test_gt_images_dir, esrgan_config.test_lr_images_dir)
+    train_datasets = TrainValidImageDataset(esrgan_config.train_lr_images_dir,
+                                            esrgan_config.train_gt_images_dir,
+                                            esrgan_config.upscale_factor)
+    test_datasets = TestImageDataset(esrgan_config.test_lr_images_dir,
+                                     esrgan_config.test_gt_images_dir,
+                                     esrgan_config.upscale_factor)
 
     # Generator all dataloader
     train_dataloader = DataLoader(train_datasets,

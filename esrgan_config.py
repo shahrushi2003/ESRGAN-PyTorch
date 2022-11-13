@@ -31,8 +31,8 @@ only_test_y_channel = True
 d_arch_name = "discriminator"
 g_arch_name = "rrdbnet_x4"
 # Model arch config
-in_channels = 3
-out_channels = 3
+in_channels = 1
+out_channels = 1
 channels = 64
 growth_channels = 32
 num_blocks = 23
@@ -44,25 +44,25 @@ exp_name = "ESRGAN_x4"
 
 if mode == "train":
     # Dataset address
-    train_gt_images_dir = f"./data/DIV2K/ESRGAN/train"
+    train_gt_images_dir = f"./Data/2.886_x_600_WB_D4"
+    train_lr_images_dir = f"./Data/2.886_x_600_WB_D2"
+    test_gt_images_dir = f"./Data/2.886_x_600_WB_D4"
+    test_lr_images_dir = f"./Data/2.886_x_600_WB_D2"
 
-    test_gt_images_dir = f"./data/Set5/GTmod12"
-    test_lr_images_dir = f"./data/Set5/LRbicx{upscale_factor}"
-
-    gt_image_size = 128
-    batch_size = 16
+    gt_image_size = 360
+    batch_size = 4
     num_workers = 4
 
     # The address to load the pretrained model
+    pretrained_g_model_weights_path = ""
+    # pretrained_g_model_weights_path = "./results/RRDBNet_x4/g_best.pth.tar"
     pretrained_d_model_weights_path = ""
-    pretrained_g_model_weights_path = "./results/RRDBNet_x4/g_best.pth.tar"
-
     # Incremental training and migration training
     resume_d_model_weights_path = f""
     resume_g_model_weights_path = f""
 
     # Total num epochs (400,000 iters)
-    epochs = 94
+    epochs = 5
 
     # Loss function weight
     pixel_weight = 0.01
@@ -93,8 +93,8 @@ if mode == "train":
 
 if mode == "test":
     # Test data address
-    lr_dir = f"./data/Set5/LRbicx{upscale_factor}"
+    lr_dir = f"./Data/2.886_x_600_WB_D2"
     sr_dir = f"./results/test/{exp_name}"
-    gt_dir = "./data/Set5/GTmod12"
+    gt_dir = f"./Data/2.886_x_600_WB_D4"
 
     g_model_weights_path = "./results/pretrained_models/ESRGAN_x4-DFO2K-25393df7.pth.tar"

@@ -45,56 +45,129 @@ def read_xray(path, voi_lut = True, fix_monochrome = True):
     return data
 __all__ = [
     "TrainValidImageDataset", "TestImageDataset",
-    "PrefetchGenerator", "PrefetchDataLoader", "CPUPrefetcher", "CUDAPrefetcher",
+    # "PrefetchGenerator", "PrefetchDataLoader",
+    "CPUPrefetcher", "CUDAPrefetcher",
 ]
 
 
-class TrainValidDataset(Dataset):
-    def __init__(self, paths_file_path, transform=T.Compose([T.ToTensor()])):
-        self.path_files_names = pd.read_csv(paths_file_path)
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.path_files_names)
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        lr_name = self.path_files_names.iloc[idx, 1]
-        lr_image = read_xray(lr_name)
-        gt_name = self.path_files_names.iloc[idx, 2]
-        gt_image = read_xray(gt_name)
-        lr_tensor = self.transform(lr_image)
-        gt_tensor = self.transform(gt_image)
-        return {"gt": gt_tensor, "lr": lr_tensor}
-
-class TestImageDataset(Dataset):
-    """Define Test dataset loading methods.
-
+class TrainValidImageDataset(Dataset):
+    """Define training/valid dataset loading methods.
     Args:
-        test_gt_images_dir (str): ground truth image in test image
-        test_lr_images_dir (str): low-resolution image in test image
+        image_dir (str): Train/Valid dataset address.
+        gt_image_size (int): Ground-truth resolution image size.
+        upscale_factor (int): Image up scale factor.
+        mode (str): Data set loading method, the training data set is for data enhancement, and the
+            verification dataset is not for data enhancement.
     """
 
-    def __init__(self, paths_file_path, transform=T.Compose([T.ToTensor()])):
-        self.path_files_names = pd.read_csv(paths_file_path)
-        self.transform = transform
+    def __init__(
+            self,
+            lr_image_dir: str,
+            gt_image_dir: str,
+            # gt_image_size: int,
+            upscale_factor: int,
+            # mode: str,
+    ) -> None:
+        super(TrainValidImageDataset, self).__init__()
+        self.lr_image_file_names = [os.path.join(lr_image_dir, image_file_name) for image_file_name in os.listdir(lr_image_dir)]
+        self.gt_image_file_names = [os.path.join(gt_image_dir, image_file_name) for image_file_name in os.listdir(gt_image_dir)]
+        # self.gt_image_size = gt_image_size
+        self.upscale_factor = upscale_factor
+        self.transform = T.Compose([T.ToTensor()])
+        # self.mode = mode
 
-    def __len__(self):
-        return len(self.path_files_names)
+    def __getitem__(self, batch_index: int) -> [dict[str, Tensor], dict[str, Tensor]]:
+        # Read a batch of image data
+        # gt_image = cv2.imread(self.image_file_names[batch_index]).astype(np.float32) / 255.
+        gt_image = read_xray(self.gt_image_file_names[batch_index])
 
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
+        # Image processing operations
+        # if self.mode == "Train":
+        #     gt_image = imgproc.random_crop(gt_image, self.gt_image_size)
+        #     gt_image = imgproc.random_rotate(gt_image, [90, 180, 270])
+        #     gt_image = imgproc.random_horizontally_flip(gt_image, 0.5)
+        #     gt_image = imgproc.random_vertically_flip(gt_image, 0.5)
+        # elif self.mode == "Valid":
+        #     gt_image = imgproc.center_crop(gt_image, self.gt_image_size)
+        # else:
+        #     raise ValueError("Unsupported data processing model, please use `Train` or `Valid`.")
 
-        lr_name = self.path_files_names.iloc[idx, 1]
-        lr_image = read_xray(lr_name)
-        gt_name = self.path_files_names.iloc[idx, 2]
-        gt_image = read_xray(gt_name)
+        lr_image = read_xray(self.lr_image_file_names[batch_index])
+
+        # BGR convert RGB
+        # gt_image = cv2.cvtColor(gt_image, cv2.COLOR_BGR2RGB)
+        # lr_image = cv2.cvtColor(lr_image, cv2.COLOR_BGR2RGB)
+
+        # Convert image data into Tensor stream format (PyTorch).
+        # Note: The range of input and output is between [0, 1]
+        # gt_tensor = imgproc.image_to_tensor(gt_image, False, False)
+        # lr_tensor = imgproc.image_to_tensor(lr_image, False, False)
         lr_tensor = self.transform(lr_image)
         gt_tensor = self.transform(gt_image)
         return {"gt": gt_tensor, "lr": lr_tensor}
+
+    def __len__(self) -> int:
+        return len(self.gt_image_file_names)
+
+
+class TestImageDataset(Dataset):
+    """Define training/valid dataset loading methods.
+    Args:
+        image_dir (str): Train/Valid dataset address.
+        gt_image_size (int): Ground-truth resolution image size.
+        upscale_factor (int): Image up scale factor.
+        mode (str): Data set loading method, the training data set is for data enhancement, and the
+            verification dataset is not for data enhancement.
+    """
+
+    def __init__(
+            self,
+            lr_image_dir: str,
+            gt_image_dir: str,
+            # gt_image_size: int,
+            upscale_factor: int,
+            # mode: str,
+    ) -> None:
+        super(TestImageDataset, self).__init__()
+        self.lr_image_file_names = [os.path.join(lr_image_dir, image_file_name) for image_file_name in os.listdir(lr_image_dir)]
+        self.gt_image_file_names = [os.path.join(gt_image_dir, image_file_name) for image_file_name in os.listdir(gt_image_dir)]
+        # self.gt_image_size = gt_image_size
+        self.upscale_factor = upscale_factor
+        self.transform = T.Compose([T.ToTensor()])
+        # self.mode = mode
+
+    def __getitem__(self, batch_index: int) -> [dict[str, Tensor], dict[str, Tensor]]:
+        # Read a batch of image data
+        # gt_image = cv2.imread(self.image_file_names[batch_index]).astype(np.float32) / 255.
+        gt_image = read_xray(self.gt_image_file_names[batch_index])
+
+        # Image processing operations
+        # if self.mode == "Train":
+        #     gt_image = imgproc.random_crop(gt_image, self.gt_image_size)
+        #     gt_image = imgproc.random_rotate(gt_image, [90, 180, 270])
+        #     gt_image = imgproc.random_horizontally_flip(gt_image, 0.5)
+        #     gt_image = imgproc.random_vertically_flip(gt_image, 0.5)
+        # elif self.mode == "Valid":
+        #     gt_image = imgproc.center_crop(gt_image, self.gt_image_size)
+        # else:
+        #     raise ValueError("Unsupported data processing model, please use `Train` or `Valid`.")
+
+        lr_image = read_xray(self.lr_image_file_names[batch_index])
+
+        # BGR convert RGB
+        # gt_image = cv2.cvtColor(gt_image, cv2.COLOR_BGR2RGB)
+        # lr_image = cv2.cvtColor(lr_image, cv2.COLOR_BGR2RGB)
+
+        # Convert image data into Tensor stream format (PyTorch).
+        # Note: The range of input and output is between [0, 1]
+        # gt_tensor = imgproc.image_to_tensor(gt_image, False, False)
+        # lr_tensor = imgproc.image_to_tensor(lr_image, False, False)
+        lr_tensor = self.transform(lr_image)
+        gt_tensor = self.transform(gt_image)
+        return {"gt": gt_tensor, "lr": lr_tensor}
+
+    def __len__(self) -> int:
+        return len(self.gt_image_file_names)
 
 
 # class PrefetchGenerator(threading.Thread):
